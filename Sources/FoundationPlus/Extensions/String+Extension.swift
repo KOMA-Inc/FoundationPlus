@@ -51,4 +51,20 @@ public extension String {
         let predicate = NSPredicate(format:"SELF MATCHES %@", regex)
         return predicate.evaluate(with: self)
     }
+
+    func before(_ delimiter: Character) -> String? {
+        guard let index = firstIndex(of: delimiter) else {
+            return nil
+        }
+
+        return String(prefix(upTo: index))
+    }
+
+    func after(_ delimiter: Character) -> String? {
+        guard let index = firstIndex(of: delimiter) else {
+            return nil
+        }
+
+        return String(suffix(from: index))
+    }
 }
