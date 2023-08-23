@@ -14,7 +14,13 @@ public extension String {
     }
 
     func asURL() -> URL? {
-        URL(string: self)
+        guard let urlString = self.addingPercentEncoding(
+            withAllowedCharacters: .urlQueryAllowed
+        ) else {
+            return nil
+        }
+
+        return URL(string: urlString)
     }
 
     var capitalizedSentence: String {
@@ -50,5 +56,21 @@ public extension String {
         "-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])"
         let predicate = NSPredicate(format:"SELF MATCHES %@", regex)
         return predicate.evaluate(with: self)
+    }
+
+    func before(_ delimiter: Character) -> String? {
+        guard let index = firstIndex(of: delimiter) else {
+            return nil
+        }
+
+        return String(prefix(upTo: index))
+    }
+
+    func after(_ delimiter: Character) -> String? {
+        guard let index = firstIndex(of: delimiter) else {
+            return nil
+        }
+
+        return String(suffix(from: index))
     }
 }
