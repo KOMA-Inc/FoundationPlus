@@ -12,11 +12,17 @@ let package = Package(
         .library(
             name: "FoundationPlus",
             targets: ["FoundationPlus"]
+        ),
+        .library(
+            name: "DataStructures",
+            targets: ["DataStructures"]
         )
     ],
     targets: [
+        .target(name: "FoundationPlus"),
         .target(
-            name: "FoundationPlus"
+            name: "DataStructures",
+            dependencies: ["FoundationPlus"]
         ),
         .testTarget(
             name: "FoundationPlusTests",
