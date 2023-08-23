@@ -14,7 +14,13 @@ public extension String {
     }
 
     func asURL() -> URL? {
-        URL(string: self)
+        guard let urlString = self.addingPercentEncoding(
+            withAllowedCharacters: .urlQueryAllowed
+        ) else {
+            return nil
+        }
+
+        return URL(string: urlString)
     }
 
     var capitalizedSentence: String {
