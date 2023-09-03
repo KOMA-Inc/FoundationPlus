@@ -14,4 +14,8 @@ public extension Collection where Element: Hashable {
             counts[element, default: 0] += 1
         }
     }
+
+    var areUnique: Bool {
+        count == Set(self).count
+    }
 }
