@@ -18,6 +18,18 @@ public extension Array {
         indices ~= index ? self[index] : `default`
     }
 
+    subscript(back index: Int) -> Element {
+        self[endIndex.advanced(by: index)]
+    }
+
+    subscript(safeBack index: Int) -> Element? {
+        indices ~= endIndex.advanced(by: index) ? self[back: index] : nil
+    }
+
+    subscript(safeBack index: Int, default: Element) -> Element {
+        indices ~= endIndex.advanced(by: index) ? self[back: index] : `default`
+    }
+
     /// Returns a slice of the array in a safe matter
     ///
     /// ```
