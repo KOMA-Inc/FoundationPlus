@@ -23,9 +23,15 @@ public extension String {
         return URL(string: urlString)
     }
 
+    var capitalizedLetter: String {
+        let firstLetter = prefix(1).capitalized
+        let remainingLetters = dropFirst()
+        return firstLetter + remainingLetters
+    }
+
     var capitalizedSentence: String {
-        let firstLetter = self.prefix(1).capitalized
-        let remainingLetters = self.dropFirst().lowercased()
+        let firstLetter = prefix(1).capitalized
+        let remainingLetters = dropFirst().lowercased()
         return firstLetter + remainingLetters
     }
 
