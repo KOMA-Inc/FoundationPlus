@@ -116,4 +116,50 @@ public extension Array where Element == String {
             }
         }
     }
+    
+    /// Removes the first element that satisfy the given predicate.
+    ///
+    /// Use this method to remove the first element in a collection that meets
+    /// particular criteria. The order of the remaining elements is preserved.
+    /// This example removes the first even number:
+    ///
+    ///     var numbers = [1, 2, 3, 4, 5]
+    ///
+    ///     phrase.removeFirst { $0 % 2 == 0 }
+    ///     // numbers == [1, 3, 4, 5]
+    ///
+    /// - Parameter shouldBeRemoved: A closure that takes an element of the
+    ///   sequence as its argument and returns a Boolean value indicating
+    ///   whether the element should be removed from the collection.
+    ///
+    /// - Complexity: O(*n*), where *n* is the length of the collection.
+    @inlinable mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows {
+        guard let index = try firstIndex(where: shouldBeRemoved) else {
+            return
+        }
+        remove(at: index)
+    }
+
+    /// Removes the last element that satisfy the given predicate.
+    ///
+    /// Use this method to remove the last element in a collection that meets
+    /// particular criteria. The order of the remaining elements is preserved.
+    /// This example removes the last even number:
+    ///
+    ///     var numbers = [1, 2, 3, 4, 5]
+    ///
+    ///     phrase.removeLast { $0 % 2 == 0 }
+    ///     // numbers == [1, 2, 3, 5]
+    ///
+    /// - Parameter shouldBeRemoved: A closure that takes an element of the
+    ///   sequence as its argument and returns a Boolean value indicating
+    ///   whether the element should be removed from the collection.
+    ///
+    /// - Complexity: O(*n*), where *n* is the length of the collection.
+    @inlinable mutating func removeLast(where shouldBeRemoved: (Element) throws -> Bool) rethrows {
+        guard let index = try lastIndex(where: shouldBeRemoved) else {
+            return
+        }
+        remove(at: index)
+    }
 }
