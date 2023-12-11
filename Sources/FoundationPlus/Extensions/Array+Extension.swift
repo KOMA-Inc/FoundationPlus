@@ -97,26 +97,7 @@ public extension Array {
             append(repeatedValue())
         }
     }
-}
 
-public extension Array where Element == String {
-    /// Merges two array by appending each string from input array to each string from original array
-    ///
-    /// ```
-    /// ["a", "b", "c"].merge(with: ["1", "2"] == ["a1", "a2", "b1", "b2", "c1", "c2"]
-    /// [].merge(with: ["1", "2"] == ["1", "2"]
-    /// ["a", "b", "c"].merge(with: [] == ["a", "b", "c"]
-    /// ```
-    func merge(with otherArray: Self) -> Self {
-        if isEmpty { return otherArray }
-        if otherArray.isEmpty { return self }
-        return flatMap { a in
-            otherArray.map { b in
-                a + b
-            }
-        }
-    }
-    
     /// Removes the first element that satisfy the given predicate.
     ///
     /// Use this method to remove the first element in a collection that meets
@@ -161,5 +142,24 @@ public extension Array where Element == String {
             return
         }
         remove(at: index)
+    }
+}
+
+public extension Array where Element == String {
+    /// Merges two array by appending each string from input array to each string from original array
+    ///
+    /// ```
+    /// ["a", "b", "c"].merge(with: ["1", "2"] == ["a1", "a2", "b1", "b2", "c1", "c2"]
+    /// [].merge(with: ["1", "2"] == ["1", "2"]
+    /// ["a", "b", "c"].merge(with: [] == ["a", "b", "c"]
+    /// ```
+    func merge(with otherArray: Self) -> Self {
+        if isEmpty { return otherArray }
+        if otherArray.isEmpty { return self }
+        return flatMap { a in
+            otherArray.map { b in
+                a + b
+            }
+        }
     }
 }
