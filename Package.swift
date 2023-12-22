@@ -23,10 +23,6 @@ let package = Package(
         .target(
             name: "DataStructures",
             dependencies: ["FoundationPlus"]
-        ),
-        .testTarget(
-            name: "FoundationPlusTests",
-            dependencies: ["FoundationPlus"]
         )
     ]
 )
