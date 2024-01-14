@@ -58,7 +58,7 @@ public protocol CameraSessionServiceProtocol {
 
      This method toggles the flash mode between on and off.
      */
-    func toggleFlash()
+    func setFlashEnabled(_ isEnabled: Bool)
 
     /**
      Configures the output options for the capture session.
@@ -203,8 +203,8 @@ extension CameraSessionService: CameraSessionServiceProtocol {
         cameraAccessSubject.eraseToAnyPublisher()
     }
 
-    public func toggleFlash() {
-        isFlashEnabled.toggle()
+    public func setFlashEnabled(_ isEnabled: Bool) {
+        isFlashEnabled = isEnabled
     }
 
     public var sessionSetupResultPublisher: AnyPublisher<SessionSetupResult, Never> {
