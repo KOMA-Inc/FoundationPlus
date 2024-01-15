@@ -22,19 +22,30 @@ SeeAlso: AVCapturePhotoCaptureDelegate, ImageOutput, CameraSessionError
 */
 class PhotoCaptureUseCase: NSObject, AVCapturePhotoCaptureDelegate {
 
-    private let photoCapturedSubject: PassthroughSubject<ImageOutput, CameraSessionError> = PassthroughSubject()
-}
-
-extension PhotoCaptureUseCase {
+    private let sessionQueue = DispatchQueue(label: "capture_photo_queue")
+    private var photoCapturedSubject: PassthroughSubject<UIImage, CameraSessionError>?
 
     /**
     A publisher that emits ImageOutput or CameraSessionError upon capturing a photo.
 
     Returns: A publisher for photo capture results.
     */
-    public var photoCapturedPublisher: AnyPublisher<ImageOutput, CameraSessionError> {
-        photoCapturedSubject
-            .eraseToAnyPublisher()
+
+    func capturePhoto(with output: AVCapturePhotoOutput, and settings: AVCapturePhotoSettings) -> AnyPublisher<UIImage, CameraSessionError> {
+        photoCapturedSubject = PassthroughSubject()
+
+        sessionQueue.async { [weak self] in
+            guard let self else { return }
+            if output.connections.isEmpty {
+                return
+            }
+            output.capturePhoto(
+                with: settings,
+                delegate: self
+            )
+        }
+
+        return photoCapturedSubject?.eraseToAnyPublisher() ?? Fail(outputType: UIImage.self, failure: .cantConvertImage).eraseToAnyPublisher()
     }
 
     func photoOutput(
@@ -43,7 +54,7 @@ extension PhotoCaptureUseCase {
         error: Error?
     ) {
         if let error {
-            photoCapturedSubject.send(
+            photoCapturedSubject?.send(
                 completion: .failure(CameraSessionError.system(error))
             )
             return
@@ -53,12 +64,12 @@ extension PhotoCaptureUseCase {
             let imageData = photo.fileDataRepresentation(),
             let image = UIImage(data: imageData, scale: 1.0)
         else {
-            photoCapturedSubject.send(
+            photoCapturedSubject?.send(
                 completion: .failure(CameraSessionError.cantConvertImage)
             )
             return
         }
 
-        photoCapturedSubject.send(ImageOutput(image: image, source: .camera))
+        photoCapturedSubject?.send(image)
     }
 }

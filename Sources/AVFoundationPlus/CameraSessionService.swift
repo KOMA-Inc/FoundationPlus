@@ -46,14 +46,19 @@ public class CameraSessionService {
         case cantCreateVideoDeviceInput(Error)
         case cantAddPhotoOutput
         case cantAddVideoOutput
-        case sessionConfigured
+        case inputSessionConfigured
+        case photoOutputSessionConfigured
+        case videoOutputSessionConfigured
     }
 
     // MARK: - Public properties
 
-    public var addPhotoOutput = false
-    public var addVideoOutput = false
-    @Published public var flashMode: AVCaptureDevice.FlashMode = .off
+    public var isPhotoOutputAvailable = false
+    public var isVideoOutputAvailable = false
+    public var accessRequested = false
+
+    public let session = AVCaptureSession()
+    public var flashMode: AVCaptureDevice.FlashMode = .off
 
     // MARK: - Private properties
 
@@ -61,10 +66,9 @@ public class CameraSessionService {
     private lazy var photoOutput = AVCapturePhotoOutput()
     private lazy var videoOutput = AVCaptureVideoDataOutput()
     private var videoDeviceInput: AVCaptureDeviceInput?
-    private var cameraAccessSubject: PassthroughSubject<Bool, Never> = PassthroughSubject()
     private var cameraConfigurationSubject: PassthroughSubject<SessionConfigurationResult, Never> = PassthroughSubject()
+    private var cameraSetupSubject: PassthroughSubject<Void, Never> = PassthroughSubject()
 
-    @Published private var session = AVCaptureSession()
     @Published private var setupResult: SessionSetupResult?
 
     // MARK: - Private use cases
@@ -72,6 +76,7 @@ public class CameraSessionService {
     private let photoCaptureUseCase = PhotoCaptureUseCase()
     private let pickPhotoFromLibraryUseCase = PickPhotoFromLibraryUseCase()
     private let videoCaptureUseCase = VideoCaptureUseCase()
+    private let cameraAccessTracker: CameraAccessTrackerProtocol?
 
     private var capturePhotoSettings: AVCapturePhotoSettings {
         let settings = AVCapturePhotoSettings()
@@ -99,7 +104,9 @@ public class CameraSessionService {
         }
     }
 
-    public init() { }
+    public init(with cameraAccessTracker: CameraAccessTrackerProtocol? = nil) {
+        self.cameraAccessTracker = cameraAccessTracker
+    }
 }
 
 extension CameraSessionService {
@@ -109,33 +116,9 @@ extension CameraSessionService {
         cameraConfigurationSubject.eraseToAnyPublisher()
     }
 
-    /// A publisher emitting the current flash mode state.
-    public var isFlashEnabledPublisher: AnyPublisher<AVCaptureDevice.FlashMode, Never> {
-        $flashMode.eraseToAnyPublisher()
-    }
-    
-    /// A publisher emitting captured images or errors during image capture.
-    public var photoOutputPublisher: AnyPublisher<ImageOutput, CameraSessionError> {
-        Publishers.Merge(
-            photoCaptureUseCase.photoCapturedPublisher,
-            pickPhotoFromLibraryUseCase.pickPhotoPublisher
-        )
-        .eraseToAnyPublisher()
-    }
-
     /// A publisher emitting captured video .
     public var videoOutputPublisher: AnyPublisher<CMSampleBuffer, Never> {
         videoCaptureUseCase.sampleBufferPublisher
-    }
-
-    /// A publisher emitting the current AVCaptureSession.
-    public var cameraSessionPublisher: AnyPublisher<AVCaptureSession, Never> {
-        $session.eraseToAnyPublisher()
-    }
-
-    /// A publisher emitting the current camera access status.
-    public var cameraAccessPublisher: AnyPublisher<Bool, Never> {
-        cameraAccessSubject.eraseToAnyPublisher()
     }
 
     /// A publisher emitting the current session setup result.
@@ -144,7 +127,12 @@ extension CameraSessionService {
             .compactMap { $0 }
             .eraseToAnyPublisher()
     }
-    
+
+    /// A Publisher that emits the finished state of camera setup process
+    public var cameraSetupFinishedPublisher: AnyPublisher<Void, Never> {
+        cameraSetupSubject.eraseToAnyPublisher()
+    }
+
     /**
      Sets up the camera session and checks for camera access authorization.
 
@@ -156,13 +144,21 @@ extension CameraSessionService {
         }
 
         sessionQueue.async { [weak self] in
-            self?.configureSession()
+            guard let self else { return }
+            configureSession()
+            if isPhotoOutputAvailable {
+                addPhotoOutput()
+            }
+            if isVideoOutputAvailable {
+                addVideoOutput()
+            }
         }
 
         if session.isRunning { return }
         sessionQueue.async { [weak self] in
             guard let self else { return }
             session.startRunning()
+            cameraSetupSubject.send(())
         }
     }
 
@@ -171,15 +167,8 @@ extension CameraSessionService {
 
      This method captures an image using the current camera settings and publishes the result or error via the `imageOutputPublisher`.
      */
-    public func captureImage() {
-        sessionQueue.async { [weak self] in
-            guard let self else { return }
-            if photoOutput.connections.isEmpty { return }
-            photoOutput.capturePhoto(
-                with: capturePhotoSettings,
-                delegate: photoCaptureUseCase
-            )
-        }
+    public func captureImage() -> AnyPublisher<UIImage, CameraSessionError> {
+        photoCaptureUseCase.capturePhoto(with: photoOutput, and: capturePhotoSettings)
     }
 
     /**
@@ -187,42 +176,27 @@ extension CameraSessionService {
 
      - Parameter from: The view controller from which to present the image picker.
      */
-    public func selectImageFromLibrary(from viewController: UIViewController) {
+    public func selectImageFromLibrary(
+        from viewController: UIViewController
+    ) -> AnyPublisher<UIImage, CameraSessionError> {
         pickPhotoFromLibraryUseCase.pickImageFromLibrary(from: viewController)
-    }
-
-    /**
-     Configures the output options for the capture session.
-
-     - Parameters:
-     - addPhotoOutput: A boolean value indicating whether to add a photo output to the capture session.
-     - addVideoOutput: A boolean value indicating whether to add a video output to the capture session.
-
-     Use this function to customise the output configuration of a capture session. Set `addPhotoOutput` to `true` if you want to include photo capture capabilities in the session, and set `addVideoOutput` to `true` if you want to include video capture capabilities. You can selectively enable or disable these options based on your application's requirements.
-
-     Example usage:
-     ```swift
-     configureOutput(addPhotoOutput: true, addVideoOutput: true)
-     */
-    public func configureOutput(addPhotoOutput: Bool, addVideoOutput: Bool) {
-        self.addPhotoOutput = addPhotoOutput
-        self.addVideoOutput = addVideoOutput
     }
 }
 
 private extension CameraSessionService {
 
-    private func requestCameraAccess(completion: @escaping (SessionSetupResult) -> Void) {
+    func requestCameraAccess(completion: @escaping (SessionSetupResult) -> Void) {
         sessionQueue.suspend()
         AVCaptureDevice.requestAccess(for: .video, completionHandler: { [weak self] granted in
             guard let self else { return }
-            cameraAccessSubject.send(granted)
+            accessRequested = true
             completion(granted ? .success : .notAuthorized)
+            cameraAccessTracker?.track(cameraAccessStatus: granted)
             sessionQueue.resume()
         })
     }
 
-    private func handleAuthorizationStatus(completion: @escaping (SessionSetupResult) -> Void) {
+    func handleAuthorizationStatus(completion: @escaping (SessionSetupResult) -> Void) {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             completion(.success)
@@ -239,67 +213,65 @@ private extension CameraSessionService {
         }
     }
 
-    private func configureSession() {
+    func addPhotoOutput() {
+        if session.canAddOutput(photoOutput) {
+            photoOutput.isHighResolutionCaptureEnabled = true
+            photoOutput.isLivePhotoCaptureEnabled = false
+            session.addOutput(photoOutput)
+            cameraConfigurationSubject.send(.photoOutputSessionConfigured)
+        } else {
+            configurationFailed(with: .cantAddPhotoOutput)
+        }
+    }
+
+    func addVideoOutput() {
+        if session.canAddOutput(videoOutput) {
+            videoOutput.setSampleBufferDelegate(
+                videoCaptureUseCase,
+                queue: DispatchQueue.global(qos: .userInitiated)
+            )
+
+            session.addOutput(videoOutput)
+            cameraConfigurationSubject.send(.videoOutputSessionConfigured)
+        } else {
+            configurationFailed(with: .cantAddVideoOutput)
+        }
+    }
+
+    func addVideoInput(_ videoDeviceInput: AVCaptureDeviceInput) {
+        session.addInput(videoDeviceInput)
+        self.videoDeviceInput = videoDeviceInput
+        cameraConfigurationSubject.send(.inputSessionConfigured)
+    }
+
+    func configurationFailed(with result: SessionConfigurationResult) {
+        cameraConfigurationSubject.send(result)
+        setupResult = .configurationFailed
+    }
+
+    func configureSession() {
         if setupResult != .success { return }
         session.beginConfiguration()
         session.sessionPreset = .photo
 
         do {
             guard let videoDevice = captureDevice else {
-                cameraConfigurationSubject.send(.defaultVideoDeviceIsUnavailable)
-                setupResult = .configurationFailed
+                configurationFailed(with: .defaultVideoDeviceIsUnavailable)
                 session.commitConfiguration()
                 return
             }
+            
             let videoDeviceInput = try AVCaptureDeviceInput(device: videoDevice)
 
             if session.canAddInput(videoDeviceInput) {
-                session.addInput(videoDeviceInput)
-                self.videoDeviceInput = videoDeviceInput
-
+                addVideoInput(videoDeviceInput)
             } else {
-                cameraConfigurationSubject.send(.cantAddVideoDeviceToTheSession)
-                setupResult = .configurationFailed
-                session.commitConfiguration()
-                return
+                configurationFailed(with: .cantAddVideoDeviceToTheSession)
             }
         } catch {
-            cameraConfigurationSubject.send(.cantCreateVideoDeviceInput(error))
-            setupResult = .configurationFailed
-            session.commitConfiguration()
-            return
+            configurationFailed(with: .cantCreateVideoDeviceInput(error))
         }
 
-        if addPhotoOutput {
-            if session.canAddOutput(photoOutput) {
-                session.addOutput(photoOutput)
-                photoOutput.isHighResolutionCaptureEnabled = true
-                photoOutput.isLivePhotoCaptureEnabled = false
-            } else {
-                cameraConfigurationSubject.send(.cantAddPhotoOutput)
-                setupResult = .configurationFailed
-                session.commitConfiguration()
-                return
-            }
-        }
-
-        if addVideoOutput {
-            if session.canAddOutput(videoOutput) {
-                videoOutput.setSampleBufferDelegate(
-                    videoCaptureUseCase,
-                    queue: DispatchQueue.global(qos: .userInitiated)
-                )
-
-                session.addOutput(videoOutput)
-            } else {
-                cameraConfigurationSubject.send(.cantAddVideoOutput)
-                setupResult = .configurationFailed
-                session.commitConfiguration()
-                return
-            }
-        }
-
-        cameraConfigurationSubject.send(.sessionConfigured)
         session.commitConfiguration()
     }
 }

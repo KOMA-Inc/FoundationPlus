@@ -38,6 +38,11 @@ public enum CameraSessionError: LocalizedError {
     case system(Error)
 
     /**
+     An error indicating a flow when user closed the photo picker without selecting an image.
+     */
+    case didCancelPickingImage
+
+    /**
      Initializes a CameraSessionError instance from an existing error.
 
      This initializer allows converting other error types into CameraSessionError.system for uniform error handling.
@@ -47,7 +52,7 @@ public enum CameraSessionError: LocalizedError {
     public init(from error: Error) {
         self = (error as? CameraSessionError) ?? .system(error)
     }
-    
+
     /**
      A localized description of the error.
 
@@ -61,6 +66,8 @@ public enum CameraSessionError: LocalizedError {
             return NSLocalizedString("Unable to convert the captured image.", comment: "")
         case .system(let error):
             return error.localizedDescription
+        case .didCancelPickingImage:
+            return "Image Picker closed"
         }
     }
 }

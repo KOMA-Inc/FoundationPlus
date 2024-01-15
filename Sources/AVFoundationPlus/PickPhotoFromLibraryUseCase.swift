@@ -20,11 +20,7 @@ import UIKit
 class PickPhotoFromLibraryUseCase: NSObject {
 
     private lazy var picker = UIImagePickerController()
-    private let pickPhotoSubject: PassthroughSubject<ImageOutput, CameraSessionError> = PassthroughSubject()
-
-    var pickPhotoPublisher: AnyPublisher<ImageOutput, CameraSessionError> {
-        pickPhotoSubject.eraseToAnyPublisher()
-    }
+    private var pickPhotoSubject: PassthroughSubject<UIImage, CameraSessionError>?
 
     override init() {
         super.init()
@@ -32,8 +28,12 @@ class PickPhotoFromLibraryUseCase: NSObject {
         picker.sourceType = .photoLibrary
     }
 
-    func pickImageFromLibrary(from sourceViewController: UIViewController) {
+    func pickImageFromLibrary(
+        from sourceViewController: UIViewController
+    ) -> AnyPublisher<UIImage, CameraSessionError> {
+        pickPhotoSubject = PassthroughSubject()
         sourceViewController.present(picker, animated: true)
+        return pickPhotoSubject?.eraseToAnyPublisher() ?? Fail(outputType: UIImage.self, failure: .cantConvertImage).eraseToAnyPublisher()
     }
 }
 
@@ -43,11 +43,15 @@ extension PickPhotoFromLibraryUseCase: UIImagePickerControllerDelegate, UINaviga
         didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
     ) {
         if let image = info[.originalImage] as? UIImage {
-            pickPhotoSubject.send(ImageOutput(image: image, source: .gallery))
+            pickPhotoSubject?.send(image)
         } else {
-            pickPhotoSubject.send(completion: .failure(.cantConvertImage))
+            pickPhotoSubject?.send(completion: .failure(.cantConvertImage))
         }
 
         picker.dismiss(animated: true)
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        pickPhotoSubject?.send(completion: .failure(.didCancelPickingImage))
     }
 }
