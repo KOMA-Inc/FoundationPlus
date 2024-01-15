@@ -3,34 +3,21 @@ import Combine
 import UIKit
 
 /**
- A protocol defining the interface for picking photos from the device's photo library.
-
- Conforming types should implement this protocol to provide the ability to pick photos from the device's photo library and publish the selected photos or errors.
+ A class defining the interface for picking photos from the device's photo library.
 
  Example usage:
  ```swift
- class MyPickPhotoUseCase: PickPhotoFromLibraryUseCaseProtocol {
- // Implement the required methods and properties here.
- }
+ var myPickPhotoUseCase: PickPhotoFromLibraryUseCase()
+ myPickPhotoUseCase
+    .pickPhotoPublisher
+    .sink {
+        ...
+    }
+    .store(in: &cancellable)
+
  SeeAlso: ImageOutput, CameraSessionError
  */
-
-protocol PickPhotoFromLibraryUseCaseProtocol {
-
-    /// A publisher that emits ImageOutput or CameraSessionError upon picking a photo from the library.
-    var pickPhotoPublisher: AnyPublisher<ImageOutput, CameraSessionError> { get }
-
-    /**
-    Picks an image from the device's photo library.
-
-    Parameter sourceViewController: The view controller from which the photo library picker is presented.
-    */
-    func pickImageFromLibrary(
-        from sourceViewController: UIViewController
-    )
-}
-
-class PickPhotoFromLibraryUseCase: NSObject, PickPhotoFromLibraryUseCaseProtocol {
+class PickPhotoFromLibraryUseCase: NSObject {
 
     private lazy var picker = UIImagePickerController()
     private let pickPhotoSubject: PassthroughSubject<ImageOutput, CameraSessionError> = PassthroughSubject()

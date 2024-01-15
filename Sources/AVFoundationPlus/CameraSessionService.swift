@@ -3,80 +3,10 @@ import Combine
 import UIKit
 
 /**
- A protocol defining the interface for a camera session service.
+ A class defining the camera session service.
 
- This protocol provides methods and publishers for managing a camera session, capturing images, toggling flash, and handling camera access.
-
- Conforming types should implement the required methods and provide publishers for accessing camera session-related information.
+ This class provides methods and publishers for managing a camera session, capturing images, toggling flash, and handling camera access.
  */
-public protocol CameraSessionServiceProtocol {
-    
-    /// A publisher emitting the current AVCaptureSession.
-    var cameraSessionPublisher: AnyPublisher<AVCaptureSession, Never> { get }
-
-    /// A publisher emitting the current flash mode state.
-    var isFlashEnabledPublisher: AnyPublisher<Bool, Never> { get }
-
-    /// A publisher emitting the current session setup result.
-    var sessionSetupResultPublisher: AnyPublisher<CameraSessionService.SessionSetupResult, Never> { get }
-
-    /// A publisher emitting the current camera configuration result.
-    var configurationResultPublisher: AnyPublisher<CameraSessionService.SessionConfigurationResult, Never> { get }
-
-    /// A publisher emitting captured images or errors during image capture.
-    var photoOutputPublisher: AnyPublisher<ImageOutput, CameraSessionError> { get }
-
-    /// A publisher emitting captured video .
-    var videoOutputPublisher: AnyPublisher<CMSampleBuffer, Never> { get }
-
-    /// A publisher emitting the current camera access status.
-    var cameraAccessPublisher: AnyPublisher<Bool, Never> { get }
-
-    /**
-     Sets up the camera session and checks for camera access authorization.
-
-     This method should be called before using the camera service to ensure that the session is properly configured and camera access is granted.
-     */
-    func setUpSession()
-
-    /**
-     Captures an image using the current camera settings.
-
-     This method captures an image using the current camera settings and publishes the result or error via the `imageOutputPublisher`.
-     */
-    func captureImage()
-
-    /**
-     Presents an image picker to select an image from the photo library.
-
-     - Parameter from: The view controller from which to present the image picker.
-     */
-    func selectImageFromLibrary(from: UIViewController)
-
-    /**
-     Toggles the flash mode of the camera.
-
-     This method toggles the flash mode between on and off.
-     */
-    func setFlashEnabled(_ isEnabled: Bool)
-
-    /**
-     Configures the output options for the capture session.
-
-     - Parameters:
-     - addPhotoOutput: A boolean value indicating whether to add a photo output to the capture session.
-     - addVideoOutput: A boolean value indicating whether to add a video output to the capture session.
-
-     Use this function to customise the output configuration of a capture session. Set `addPhotoOutput` to `true` if you want to include photo capture capabilities in the session, and set `addVideoOutput` to `true` if you want to include video capture capabilities. You can selectively enable or disable these options based on your application's requirements.
-
-     Example usage:
-     ```swift
-     configureOutput(addPhotoOutput: true, addVideoOutput: true)
-     */
-    func configureOutput(addPhotoOutput: Bool, addVideoOutput: Bool)
-}
-
-
 public class CameraSessionService {
 
     /**
@@ -119,30 +49,29 @@ public class CameraSessionService {
         case sessionConfigured
     }
 
-    // MARK: - Private properties
+    // MARK: - Public properties
 
     public var addPhotoOutput = false
     public var addVideoOutput = false
+    @Published public var flashMode: AVCaptureDevice.FlashMode = .off
+
+    // MARK: - Private properties
+
     private let sessionQueue = DispatchQueue(label: "camera_queue")
-    private let photoOutput = AVCapturePhotoOutput()
-    private let videoOutput = AVCaptureVideoDataOutput()
+    private lazy var photoOutput = AVCapturePhotoOutput()
+    private lazy var videoOutput = AVCaptureVideoDataOutput()
     private var videoDeviceInput: AVCaptureDeviceInput?
     private var cameraAccessSubject: PassthroughSubject<Bool, Never> = PassthroughSubject()
     private var cameraConfigurationSubject: PassthroughSubject<SessionConfigurationResult, Never> = PassthroughSubject()
 
     @Published private var session = AVCaptureSession()
-    @Published private var isFlashEnabled = false
     @Published private var setupResult: SessionSetupResult?
 
     // MARK: - Private use cases
 
-    private let photoCaptureUseCase: PhotoCaptureUseCaseProtocol = PhotoCaptureUseCase()
-    private let pickPhotoFromLibraryUseCase: PickPhotoFromLibraryUseCaseProtocol = PickPhotoFromLibraryUseCase()
-    private let videoCaptureUseCase: VideoCaptureUseCaseProtocol = VideoCaptureUseCase()
-
-    private var flashMode: AVCaptureDevice.FlashMode {
-        (captureDevice?.hasFlash == true && isFlashEnabled) ? .on : .off
-    }
+    private let photoCaptureUseCase = PhotoCaptureUseCase()
+    private let pickPhotoFromLibraryUseCase = PickPhotoFromLibraryUseCase()
+    private let videoCaptureUseCase = VideoCaptureUseCase()
 
     private var capturePhotoSettings: AVCapturePhotoSettings {
         let settings = AVCapturePhotoSettings()
@@ -173,16 +102,19 @@ public class CameraSessionService {
     public init() { }
 }
 
-extension CameraSessionService: CameraSessionServiceProtocol {
+extension CameraSessionService {
 
+    /// A publisher emitting the current camera configuration result.
     public var configurationResultPublisher: AnyPublisher<SessionConfigurationResult, Never> {
         cameraConfigurationSubject.eraseToAnyPublisher()
     }
 
-    public var isFlashEnabledPublisher: AnyPublisher<Bool, Never> {
-        $isFlashEnabled.eraseToAnyPublisher()
+    /// A publisher emitting the current flash mode state.
+    public var isFlashEnabledPublisher: AnyPublisher<AVCaptureDevice.FlashMode, Never> {
+        $flashMode.eraseToAnyPublisher()
     }
     
+    /// A publisher emitting captured images or errors during image capture.
     public var photoOutputPublisher: AnyPublisher<ImageOutput, CameraSessionError> {
         Publishers.Merge(
             photoCaptureUseCase.photoCapturedPublisher,
@@ -191,29 +123,34 @@ extension CameraSessionService: CameraSessionServiceProtocol {
         .eraseToAnyPublisher()
     }
 
+    /// A publisher emitting captured video .
     public var videoOutputPublisher: AnyPublisher<CMSampleBuffer, Never> {
         videoCaptureUseCase.sampleBufferPublisher
     }
 
+    /// A publisher emitting the current AVCaptureSession.
     public var cameraSessionPublisher: AnyPublisher<AVCaptureSession, Never> {
         $session.eraseToAnyPublisher()
     }
 
+    /// A publisher emitting the current camera access status.
     public var cameraAccessPublisher: AnyPublisher<Bool, Never> {
         cameraAccessSubject.eraseToAnyPublisher()
     }
 
-    public func setFlashEnabled(_ isEnabled: Bool) {
-        isFlashEnabled = isEnabled
-    }
-
+    /// A publisher emitting the current session setup result.
     public var sessionSetupResultPublisher: AnyPublisher<SessionSetupResult, Never> {
         $setupResult
             .compactMap { $0 }
             .eraseToAnyPublisher()
     }
     
-    public func setUpSession() {
+    /**
+     Sets up the camera session and checks for camera access authorization.
+
+     This method should be called before using the camera service to ensure that the session is properly configured and camera access is granted.
+     */
+    public func setupSession() {
         handleAuthorizationStatus { setupResult in
             self.setupResult = setupResult
         }
@@ -229,6 +166,11 @@ extension CameraSessionService: CameraSessionServiceProtocol {
         }
     }
 
+    /**
+     Captures an image using the current camera settings.
+
+     This method captures an image using the current camera settings and publishes the result or error via the `imageOutputPublisher`.
+     */
     public func captureImage() {
         sessionQueue.async { [weak self] in
             guard let self else { return }
@@ -240,10 +182,28 @@ extension CameraSessionService: CameraSessionServiceProtocol {
         }
     }
 
+    /**
+     Presents an image picker to select an image from the photo library.
+
+     - Parameter from: The view controller from which to present the image picker.
+     */
     public func selectImageFromLibrary(from viewController: UIViewController) {
         pickPhotoFromLibraryUseCase.pickImageFromLibrary(from: viewController)
     }
 
+    /**
+     Configures the output options for the capture session.
+
+     - Parameters:
+     - addPhotoOutput: A boolean value indicating whether to add a photo output to the capture session.
+     - addVideoOutput: A boolean value indicating whether to add a video output to the capture session.
+
+     Use this function to customise the output configuration of a capture session. Set `addPhotoOutput` to `true` if you want to include photo capture capabilities in the session, and set `addVideoOutput` to `true` if you want to include video capture capabilities. You can selectively enable or disable these options based on your application's requirements.
+
+     Example usage:
+     ```swift
+     configureOutput(addPhotoOutput: true, addVideoOutput: true)
+     */
     public func configureOutput(addPhotoOutput: Bool, addVideoOutput: Bool) {
         self.addPhotoOutput = addPhotoOutput
         self.addVideoOutput = addVideoOutput

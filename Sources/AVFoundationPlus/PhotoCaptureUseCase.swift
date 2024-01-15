@@ -3,37 +3,36 @@ import Combine
 import UIKit
 
 /**
- A protocol defining the interface for a photo capture use case.
+ A class defining the interface for a photo capture use case.
 
- Conforming types should implement this protocol to handle AVCapturePhoto capture events and provide a publisher for photo capture results.
 
- - Note: This protocol inherits from `AVCapturePhotoCaptureDelegate` to handle photo capture events.
+ - Note: This class inherits from `AVCapturePhotoCaptureDelegate` to handle photo capture events.
 
  Example usage:
  ```swift
- class MyPhotoCaptureUseCase: NSObject, PhotoCaptureUseCaseProtocol {
-     // Implement the required methods and properties here.
- }
+ var myPhotoCaptureUseCase: PhotoCaptureUseCase()
+ myPickPhotoUseCase
+    .photoCapturedPublisher
+    .sink {
+        ...
+    }
+    .store(in: &cancellable)
+
 SeeAlso: AVCapturePhotoCaptureDelegate, ImageOutput, CameraSessionError
 */
+class PhotoCaptureUseCase: NSObject, AVCapturePhotoCaptureDelegate {
 
-protocol PhotoCaptureUseCaseProtocol: AVCapturePhotoCaptureDelegate {
+    private let photoCapturedSubject: PassthroughSubject<ImageOutput, CameraSessionError> = PassthroughSubject()
+}
+
+extension PhotoCaptureUseCase {
 
     /**
     A publisher that emits ImageOutput or CameraSessionError upon capturing a photo.
 
     Returns: A publisher for photo capture results.
     */
-    var photoCapturedPublisher: AnyPublisher<ImageOutput, CameraSessionError> { get }
-}
-
-class PhotoCaptureUseCase: NSObject, AVCapturePhotoCaptureDelegate {
-
-    private let photoCapturedSubject: PassthroughSubject<ImageOutput, CameraSessionError> = PassthroughSubject()
-}
-
-extension PhotoCaptureUseCase: PhotoCaptureUseCaseProtocol {
-    var photoCapturedPublisher: AnyPublisher<ImageOutput, CameraSessionError> {
+    public var photoCapturedPublisher: AnyPublisher<ImageOutput, CameraSessionError> {
         photoCapturedSubject
             .eraseToAnyPublisher()
     }
