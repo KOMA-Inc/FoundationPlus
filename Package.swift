@@ -16,12 +16,20 @@ let package = Package(
         .library(
             name: "DataStructures",
             targets: ["DataStructures"]
+        ),
+        .library(
+            name: "AVFoundationPlus",
+            targets: ["AVFoundationPlus"]
         )
     ],
     targets: [
         .target(name: "FoundationPlus"),
         .target(
             name: "DataStructures",
+            dependencies: ["FoundationPlus"]
+        ),
+        .target(
+            name: "AVFoundationPlus",
             dependencies: ["FoundationPlus"]
         )
     ]
