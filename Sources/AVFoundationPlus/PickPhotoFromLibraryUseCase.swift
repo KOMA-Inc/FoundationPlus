@@ -52,6 +52,7 @@ extension PickPhotoFromLibraryUseCase: UIImagePickerControllerDelegate, UINaviga
     }
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
         pickPhotoSubject?.send(completion: .failure(.didCancelPickingImage))
     }
 }
