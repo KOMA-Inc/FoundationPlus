@@ -44,7 +44,7 @@ public class PreviewView: UIView {
             videoPreviewLayer.session
         }
         set {
-            videoPreviewLayer.videoGravity = .resizeAspectFill
+//            videoPreviewLayer.videoGravity = .resizeAspectFill
             videoPreviewLayer.session = newValue
         }
     }
