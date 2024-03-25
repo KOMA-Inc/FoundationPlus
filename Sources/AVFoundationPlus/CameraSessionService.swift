@@ -143,6 +143,9 @@ extension CameraSessionService {
             self.setupResult = setupResult
         }
 
+        #if DEBUG
+        cameraSetupSubject.send(())
+        #else
         sessionQueue.async { [weak self] in
             guard let self else { return }
             configureSession()
@@ -160,6 +163,7 @@ extension CameraSessionService {
             session.startRunning()
             cameraSetupSubject.send(())
         }
+        #endif
     }
 
     /**
