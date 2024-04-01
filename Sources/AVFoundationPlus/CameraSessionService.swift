@@ -19,6 +19,10 @@ public class CameraSessionService {
      Use this enumeration to check the result of the camera session setup and handle different scenarios accordingly.
      */
     public enum SessionSetupResult {
+
+        /// The setup is in progress
+        case idle
+
         /// The camera session setup was successful.
         case success
 
@@ -69,7 +73,7 @@ public class CameraSessionService {
     private var cameraConfigurationSubject: PassthroughSubject<SessionConfigurationResult, Never> = PassthroughSubject()
     private var cameraSetupSubject: PassthroughSubject<Void, Never> = PassthroughSubject()
 
-    @Published private var setupResult: SessionSetupResult?
+    @Published private var setupResult: SessionSetupResult = .idle
 
     // MARK: - Private use cases
 
@@ -123,9 +127,7 @@ extension CameraSessionService {
 
     /// A publisher emitting the current session setup result.
     public var sessionSetupResultPublisher: AnyPublisher<SessionSetupResult, Never> {
-        $setupResult
-            .compactMap { $0 }
-            .eraseToAnyPublisher()
+        $setupResult.eraseToAnyPublisher()
     }
 
     /// A Publisher that emits the finished state of camera setup process
