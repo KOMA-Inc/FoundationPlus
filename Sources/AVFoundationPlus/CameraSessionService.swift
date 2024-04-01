@@ -145,7 +145,7 @@ extension CameraSessionService {
             self.setupResult = setupResult
         }
 
-        #if DEBUG
+        #if targetEnvironment(simulator)
         cameraSetupSubject.send(())
         #else
         sessionQueue.async { [weak self] in

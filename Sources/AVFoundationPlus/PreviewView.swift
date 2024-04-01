@@ -13,6 +13,21 @@ import UIKit
  SeeAlso: AVCaptureSession, AVCaptureVideoPreviewLayer
  */
 public class PreviewView: UIView {
+
+    public override init(frame: CGRect) {
+        super.init(frame: frame)
+        setup()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setup()
+    }
+
+    private func setup() {
+        clipsToBounds  = true
+    }
+
     /*
      Returns the underlying AVCaptureVideoPreviewLayer used for displaying the live video preview.
 
