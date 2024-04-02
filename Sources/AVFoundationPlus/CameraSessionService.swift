@@ -80,7 +80,7 @@ public class CameraSessionService {
     private let photoCaptureUseCase = PhotoCaptureUseCase()
     private let pickPhotoFromLibraryUseCase = PickPhotoFromLibraryUseCase()
     private let videoCaptureUseCase = VideoCaptureUseCase()
-    private let cameraAccessTracker: CameraAccessTrackerProtocol?
+    private var cameraAccessTracker: CameraAccessTrackerProtocol?
 
     private var capturePhotoSettings: AVCapturePhotoSettings {
         let settings = AVCapturePhotoSettings()
@@ -109,6 +109,10 @@ public class CameraSessionService {
     }
 
     public init(with cameraAccessTracker: CameraAccessTrackerProtocol? = nil) {
+        self.cameraAccessTracker = cameraAccessTracker
+    }
+
+    public func setCameraAccessTracker(_ cameraAccessTracker: CameraAccessTrackerProtocol) {
         self.cameraAccessTracker = cameraAccessTracker
     }
 }
