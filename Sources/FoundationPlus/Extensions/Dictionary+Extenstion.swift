@@ -10,4 +10,8 @@ public extension Dictionary {
         }
         return dict
     }
+
+    subscript(unsafe key: Key) -> Value {
+        self[key]!
+    }
 }
