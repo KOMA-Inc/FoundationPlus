@@ -84,7 +84,11 @@ public class CameraSessionService {
 
     private var capturePhotoSettings: AVCapturePhotoSettings {
         let settings = AVCapturePhotoSettings()
-        settings.flashMode = flashMode
+        settings.flashMode = if photoOutput.supportedFlashModes.contains(flashMode) {
+            flashMode
+        } else {
+            photoOutput.supportedFlashModes.first ?? .off
+        }
         return settings
     }
 
