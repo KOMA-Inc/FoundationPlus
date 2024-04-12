@@ -53,13 +53,26 @@ public class PreviewView: UIView {
         return layer
     }
 
+    /**
+     @property videoGravity
+     @abstract
+        A string defining how the video is displayed within an AVCaptureVideoPreviewLayer bounds rect.
+     */
+    public var videoGravity: AVLayerVideoGravity {
+        get {
+            videoPreviewLayer.videoGravity
+        }
+        set {
+            videoPreviewLayer.videoGravity = newValue
+        }
+    }
+
     /// The AVCaptureSession to be displayed as a live video preview.
     public var session: AVCaptureSession? {
         get {
             videoPreviewLayer.session
         }
         set {
-            videoPreviewLayer.videoGravity = .resizeAspectFill
             videoPreviewLayer.session = newValue
         }
     }

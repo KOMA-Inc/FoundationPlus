@@ -143,6 +143,14 @@ extension CameraSessionService {
         cameraSetupSubject.eraseToAnyPublisher()
     }
 
+    public var captureResolution: CGSize? {
+        captureDevice.map { captureDevice in
+            let formatDescription = captureDevice.activeFormat.formatDescription
+            let dimensions = CMVideoFormatDescriptionGetDimensions(formatDescription)
+            return CGSize(width: CGFloat(dimensions.height), height: CGFloat(dimensions.width))
+        }
+    }
+
     /**
      Sets up the camera session and checks for camera access authorization.
 
