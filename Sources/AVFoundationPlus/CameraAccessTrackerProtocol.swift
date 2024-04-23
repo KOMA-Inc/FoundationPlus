@@ -1,3 +1,3 @@
-public protocol CameraAccessTrackerProtocol {
+public protocol CameraAccessTrackerProtocol: AnyObject {
     func track(cameraAccessStatus status: Bool)
 }

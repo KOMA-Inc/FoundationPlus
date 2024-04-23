@@ -80,7 +80,7 @@ public class CameraSessionService {
     private let photoCaptureUseCase = PhotoCaptureUseCase()
     private let pickPhotoFromLibraryUseCase = PickPhotoFromLibraryUseCase()
     private let videoCaptureUseCase = VideoCaptureUseCase()
-    private var cameraAccessTracker: CameraAccessTrackerProtocol?
+    private weak var cameraAccessTracker: CameraAccessTrackerProtocol?
 
     private var capturePhotoSettings: AVCapturePhotoSettings {
         let settings = AVCapturePhotoSettings()
