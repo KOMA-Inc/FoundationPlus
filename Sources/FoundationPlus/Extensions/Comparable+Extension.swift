@@ -7,4 +7,8 @@ public extension Comparable {
         }
         return self
     }
+
+    func clamped(to limits: ClosedRange<Self>) -> Self {
+        min(max(self, limits.lowerBound), limits.upperBound)
+    }
 }
