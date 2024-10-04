@@ -12,19 +12,19 @@ import UIKit
  previewView.session = yourAVCaptureSession
  SeeAlso: AVCaptureSession, AVCaptureVideoPreviewLayer
  */
-public class PreviewView: UIView {
+open class PreviewView: UIView {
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
         setup()
     }
 
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         super.init(coder: coder)
         setup()
     }
 
-    private func setup() {
+    open func setup() {
         clipsToBounds  = true
     }
 
@@ -41,7 +41,7 @@ public class PreviewView: UIView {
 
      SeeAlso: AVCaptureVideoPreviewLayer
      */
-    private var videoPreviewLayer: AVCaptureVideoPreviewLayer {
+    public var videoPreviewLayer: AVCaptureVideoPreviewLayer {
         guard let layer = layer as? AVCaptureVideoPreviewLayer else {
             fatalError(
              """
