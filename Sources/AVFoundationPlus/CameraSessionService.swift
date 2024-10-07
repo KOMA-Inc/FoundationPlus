@@ -64,6 +64,8 @@ public class CameraSessionService {
     public let session = AVCaptureSession()
     public var flashMode: AVCaptureDevice.FlashMode = .off
 
+    @Published public private(set) var zoomFactor: CGFloat = 1
+
     // MARK: - Private properties
 
     private let sessionQueue = DispatchQueue(label: "camera_queue")
@@ -203,6 +205,20 @@ extension CameraSessionService {
     ) -> AnyPublisher<UIImage, CameraSessionError> {
         pickPhotoFromLibraryUseCase.pickImageFromLibrary(from: viewController)
     }
+
+    /**
+     Applies given zoom factor to current input device. Method applies value only if it is in bounds between default (1x) and max supported (5x).
+
+     - Parameter zoomFactor: value of zoom factor to apply.
+     */
+    public func applyZoomFactor(_ zoomFactor: CGFloat) {
+        setZoomFactor(zoomFactor)
+    }
+
+    /// Applies default zoom factor (1x).
+    public func resetZoomFactor() {
+        setZoomFactor(1)
+    }
 }
 
 private extension CameraSessionService {
@@ -263,6 +279,7 @@ private extension CameraSessionService {
     func addVideoInput(_ videoDeviceInput: AVCaptureDeviceInput) {
         session.addInput(videoDeviceInput)
         self.videoDeviceInput = videoDeviceInput
+        resetZoomFactor()
         cameraConfigurationSubject.send(.inputSessionConfigured)
     }
 
@@ -295,5 +312,27 @@ private extension CameraSessionService {
         }
 
         session.commitConfiguration()
+    }
+}
+
+private extension CameraSessionService {
+
+    func setZoomFactor(_ zoomFactor: CGFloat) {
+        guard let device = videoDeviceInput?.device else { return }
+
+        let minZoomFactor: CGFloat = 1.0
+        let maxZoomFactor: CGFloat = 5.0
+        let clampedZoomFactor = max(minZoomFactor, min(zoomFactor, maxZoomFactor))
+
+        do {
+            try device.lockForConfiguration()
+            device.videoZoomFactor = clampedZoomFactor
+            device.unlockForConfiguration()
+            self.zoomFactor = clampedZoomFactor
+        } catch {
+            #if DEBUG
+            debugPrint("Error setting zoom factor: \(error)")
+            #endif
+        }
     }
 }
