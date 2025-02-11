@@ -36,15 +36,26 @@ public extension String {
     }
 
     func localized(
+        language: String? = nil,
         bundle: Bundle = .main,
         tableName: String = "Localizable",
         arguments: CVarArg...
     ) -> String {
-        let localized = NSLocalizedString(self, tableName: tableName, bundle: bundle, value: "**\(self)**", comment: "")
+        let effectiveBundle: Bundle
+
+        if let language = language,
+           let path = bundle.path(forResource: language, ofType: "lproj"),
+           let langBundle = Bundle(path: path) {
+            effectiveBundle = langBundle
+        } else {
+            effectiveBundle = bundle
+        }
+
+        let localized = NSLocalizedString(self, tableName: tableName, bundle: effectiveBundle, value: "**\(self)**", comment: "")
 
         return arguments.isEmpty
-        ? localized
-        : String(format: localized, arguments: arguments)
+            ? localized
+            : String(format: localized, arguments: arguments)
     }
 
     var mutableAttributedString: NSMutableAttributedString {
