@@ -9,7 +9,7 @@ public struct Storage<T: Codable> {
 
     private var lastRetrievedValue: T?
 
-    private let subject = PassthroughSubject<T, Never>()
+    private let subject = CurrentValueSubject<T?, Never>(nil)
 
     public init(key: String, default: T, userDefaults: UserDefaults? = .standard) {
         self.key = key
@@ -40,6 +40,6 @@ public struct Storage<T: Codable> {
     }
 
     public var publisher: AnyPublisher<T, Never> {
-        subject.eraseToAnyPublisher()
+        subject.compactMap{ $0 }.eraseToAnyPublisher()
     }
 }
