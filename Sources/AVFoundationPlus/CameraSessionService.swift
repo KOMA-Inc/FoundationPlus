@@ -82,6 +82,7 @@ public class CameraSessionService {
     private let photoCaptureUseCase = PhotoCaptureUseCase()
     private let pickPhotoFromLibraryUseCase = PickPhotoFromLibraryUseCase()
     private let videoCaptureUseCase = VideoCaptureUseCase()
+    private var zoomOffset: CGFloat = 0
     private weak var cameraAccessTracker: CameraAccessTrackerProtocol?
 
     private var capturePhotoSettings: AVCapturePhotoSettings {
@@ -95,19 +96,40 @@ public class CameraSessionService {
     }
 
     private var captureDevice: AVCaptureDevice? {
-        if let dualCameraDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) {
+        if let tripleCameraDevice = AVCaptureDevice.default(
+            .builtInTripleCamera,
+            for: .video,
+            position: .back
+        ) {
+            // Newest and most flexible (iPhone 11 Pro, 12 Pro, 13 Pro, 14 Pro, 15 Pro, etc.)
+            tripleCameraDevice
+        } else if let dualWideCameraDevice = AVCaptureDevice.default(
+            .builtInDualWideCamera,
+            for: .video,
+            position: .back
+        ) {
+            // Dual wide (iPhone 11, 12, 13, 14, 15, etc.)
+            dualWideCameraDevice
+        } else if let dualCameraDevice = AVCaptureDevice.default(
+            .builtInDualCamera,
+            for: .video,
+            position: .back
+        ) {
+            // Older dual camera (iPhone 7 Plus, 8 Plus, X, etc.)
             dualCameraDevice
         } else if let backCameraDevice = AVCaptureDevice.default(
             .builtInWideAngleCamera,
             for: .video,
             position: .back
         ) {
+            // Wide angle (single lens fallback for most devices)
             backCameraDevice
         } else if let frontCameraDevice = AVCaptureDevice.default(
             .builtInWideAngleCamera,
             for: .video,
             position: .front
         ) {
+            // Front camera fallback (as last resort)
             frontCameraDevice
         } else {
             nil
@@ -279,6 +301,7 @@ private extension CameraSessionService {
     func addVideoInput(_ videoDeviceInput: AVCaptureDeviceInput) {
         session.addInput(videoDeviceInput)
         self.videoDeviceInput = videoDeviceInput
+        configureZoomOffset(with: videoDeviceInput)
         resetZoomFactor()
         cameraConfigurationSubject.send(.inputSessionConfigured)
     }
@@ -313,6 +336,10 @@ private extension CameraSessionService {
 
         session.commitConfiguration()
     }
+
+    func configureZoomOffset(with videoDeviceInput: AVCaptureDeviceInput) {
+        zoomOffset = (videoDeviceInput.device.deviceType == .builtInTripleCamera) ? 1 : 0
+    }
 }
 
 private extension CameraSessionService {
@@ -326,7 +353,7 @@ private extension CameraSessionService {
 
         do {
             try device.lockForConfiguration()
-            device.videoZoomFactor = clampedZoomFactor
+            device.videoZoomFactor = clampedZoomFactor + zoomOffset
             device.unlockForConfiguration()
             self.zoomFactor = clampedZoomFactor
         } catch {
