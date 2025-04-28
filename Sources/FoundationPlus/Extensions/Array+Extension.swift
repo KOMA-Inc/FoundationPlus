@@ -143,6 +143,16 @@ public extension Array {
         }
         remove(at: index)
     }
+
+    /// Splits the array into chunks of a specified maximum size.
+    ///
+    /// - Parameter size: The maximum size of each chunk.
+    /// - Returns: An array of arrays, where each subarray contains at most `size` elements.
+    func chunked(size: Int) -> [[Element]] {
+        stride(from: 0, to: count, by: size).map {
+            Array(self[$0..<Swift.min($0 + size, count)])
+        }
+    }
 }
 
 public extension Array where Element == String {
