@@ -7,8 +7,6 @@ public struct Storage<T: Codable> {
     private let `default`: T
     private let userDefaults: UserDefaults?
 
-    private var lastRetrievedValue: T?
-
     private let subject = CurrentValueSubject<T?, Never>(nil)
 
     public init(key: String, default: T, userDefaults: UserDefaults? = .standard) {
@@ -20,10 +18,6 @@ public struct Storage<T: Codable> {
 
     public var wrappedValue: T {
         get {
-            if let lastRetrievedValue {
-                return lastRetrievedValue
-            }
-
             guard let data = userDefaults?.object(forKey: key) as? Data else {
                 return `default`
             }
@@ -34,7 +28,6 @@ public struct Storage<T: Codable> {
         set {
             let data = try? JSONEncoder().encode(newValue)
             userDefaults?.set(data, forKey: key)
-            lastRetrievedValue = newValue
             subject.send(newValue)
         }
     }
