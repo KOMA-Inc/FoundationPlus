@@ -338,7 +338,12 @@ private extension CameraSessionService {
     }
 
     func configureZoomOffset(with videoDeviceInput: AVCaptureDeviceInput) {
-        zoomOffset = (videoDeviceInput.device.deviceType == .builtInTripleCamera) ? 1 : 0
+        switch videoDeviceInput.device.deviceType {
+        case .builtInTripleCamera, .builtInDualWideCamera:
+            zoomOffset = 1
+        default:
+            zoomOffset = 0
+        }
     }
 }
 
